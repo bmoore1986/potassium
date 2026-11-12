@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Potassium">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1f5f4a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Potassium Food Guide</title>
+<style>
+  :root { --fs: 20px; --green:#1f5f4a; --bg:#f6f4ef; --card:#fff; --ink:#1d1d1b; --mute:#5b5b57; --line:#dcd8cf; }
+  * { box-sizing: border-box; }
+  html { font-size: var(--fs); -webkit-text-size-adjust: 100%; }
+  body { margin:0; font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--ink); line-height:1.35; }
+  header { position: sticky; top:0; z-index:5; background:var(--green); color:#fff; padding: env(safe-area-inset-top) 12px 10px; }
+  header h1 { font-size:1.1rem; margin:10px 0 8px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .sz button { background:rgba(255,255,255,.18); color:#fff; border:0; border-radius:8px; font-size:.85rem; padding:6px 10px; margin-left:4px; }
+  input[type=search] { width:100%; font-size:1rem; padding:12px 14px; border:0; border-radius:12px; }
+  .row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  select { flex:1; min-width:140px; font-size:.9rem; padding:10px; border-radius:10px; border:0; background:#fff; color:var(--ink); }
+  .chips { display:flex; gap:6px; margin-top:8px; overflow-x:auto; padding-bottom:2px; }
+  .chip { flex:none; font-size:.85rem; padding:7px 12px; border-radius:999px; border:2px solid rgba(255,255,255,.5); background:transparent; color:#fff; }
+  .chip.on { background:#fff; color:var(--green); border-color:#fff; font-weight:600; }
+  main { padding:10px 12px calc(30px + env(safe-area-inset-bottom)); max-width:720px; margin:0 auto; }
+  .count { color:var(--mute); font-size:.8rem; margin:4px 2px 8px; }
+  .item { background:var(--card); border:1px solid var(--line); border-left:10px solid #999; border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+  .item.g { border-left-color:#2e9e5b; } .item.y { border-left-color:#e0a800; } .item.r { border-left-color:#d23b3b; }
+  .top { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+  .name { font-weight:700; font-size:1.05rem; }
+  .mg { font-weight:700; white-space:nowrap; }
+  .sub { color:var(--mute); font-size:.85rem; margin-top:2px; }
+  .bar { height:8px; background:#ebe8e0; border-radius:6px; margin:8px 0 6px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:#888; }
+  .g .bar i { background:#2e9e5b; } .y .bar i { background:#e0a800; } .r .bar i { background:#d23b3b; }
+  .little { font-size:.9rem; margin-top:4px; }
+  .badge { display:inline-block; font-size:.75rem; font-weight:700; padding:2px 8px; border-radius:6px; margin-right:6px; color:#fff; }
+  .g .badge { background:#2e9e5b; } .y .badge { background:#b98600; } .r .badge { background:#d23b3b; }
+  .note { font-size:.8rem; color:var(--mute); margin-top:4px; }
+  .legend, .foot { font-size:.8rem; color:var(--mute); background:#ece9e0; border-radius:10px; padding:10px 12px; margin:10px 0; }
+  .foot button { font-size:.85rem; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; }
+  .empty { text-align:center; color:var(--mute); padding:30px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Potassium Food Guide</span>
+    <span class="sz"><button id="smaller" aria-label="Smaller text">A−</button><button id="bigger" aria-label="Bigger text">A+</button></span></h1>
+  <input id="q" type="search" placeholder="Search foods…" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <div class="row">
+    <select id="sort" aria-label="Sort">
+      <option value="name">Sort: Name A–Z</option>
+      <option value="low">Sort: Potassium, low → high</option>
+      <option value="high">Sort: Potassium, high → low</option>
+    </select>
+    <select id="cat" aria-label="Category"><option value="">All categories</option></select>
+  </div>
+  <div class="chips" id="chips">
+    <button class="chip on" data-r="">All</button>
+    <button class="chip" data-r="g">🟢 Small taste fine</button>
+    <button class="chip" data-r="y">🟡 Plan for it</button>
+    <button class="chip" data-r="r">🔴 Big hit</button>
+  </div>
+</header>
+<main>
+  <div class="legend">🟢 small portion under ~150 mg · 🟡 small portion ~150–300 mg · 🔴 even a modest portion is 300+ mg. The bar shows one typical serving as a share of the daily budget.</div>
+  <div class="count" id="count"></div>
+  <div id="list"></div>
+  <div class="foot">
+    Daily budget: <b id="budget">2,000</b> mg <button id="setBudget">Change</button><br><br>
+    General information, not medical advice. Numbers are approximate and vary by size, brand and cooking. Ask the doctor or a kidney dietitian for the right daily limit.
+  </div>
+</main>
+<script src="data.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var LABEL = { g: "Small taste OK", y: "Plan for it", r: "Big hit" };
+  var state = { q: "", sort: "name", cat: "", r: "" };
+  var budget = 2000, fs = 20;
+  try { budget = +localStorage.getItem("budget") || 2000; fs = +localStorage.getItem("fs") || 20; } catch (e) {}
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function norm(s) { return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+  function applyFs() { document.documentElement.style.setProperty("--fs", fs + "px"); try { localStorage.setItem("fs", fs); } catch (e) {} }
+
+  var cats = []; FOODS.forEach(function (f) { if (cats.indexOf(f.c) < 0) cats.push(f.c); });
+  cats.sort().forEach(function (c) { var o = document.createElement("option"); o.value = c; o.textContent = c; $("cat").appendChild(o); });
+
+  function render() {
+    var q = norm(state.q.trim());
+    var list = FOODS.filter(function (f) {
+      if (state.cat && f.c !== state.cat) return false;
+      if (state.r && f.r !== state.r) return false;
+      if (q && norm(f.n + " " + f.c + " " + (f.l || "")).indexOf(q) < 0) return false;
+      return true;
+    });
+    list.sort(function (a, b) {
+      if (state.sort === "low") return a.m - b.m || a.n.localeCompare(b.n);
+      if (state.sort === "high") return b.m - a.m || a.n.localeCompare(b.n);
+      return a.n.localeCompare(b.n);
+    });
+    $("count").textContent = list.length + " food" + (list.length === 1 ? "" : "s");
+    $("budget").textContent = budget.toLocaleString();
+    if (!list.length) { $("list").innerHTML = '<div class="empty">No foods match. Try a different word.</div>'; return; }
+    $("list").innerHTML = list.map(function (f) {
+      var pct = f.m ? Math.round(f.m / budget * 100) : 0;
+      return '<div class="item ' + f.r + '">' +
+        '<div class="top"><span class="name">' + esc(f.n) + '</span><span class="mg">' + esc(f.k) + '</span></div>' +
+        '<div class="sub">' + esc(f.s) + ' · ' + esc(f.c) + (f.m ? ' · ' + pct + '% of day' : '') + '</div>' +
+        (f.m ? '<div class="bar"><i style="width:' + Math.min(100, pct) + '%"></i></div>' : '') +
+        '<div class="little"><span class="badge">' + LABEL[f.r] + '</span>' + esc(f.l || "") + '</div>' +
+        (f.t ? '<div class="note">' + esc(f.t) + '</div>' : '') + '</div>';
+    }).join("");
+  }
+
+  $("q").addEventListener("input", function (e) { state.q = e.target.value; render(); });
+  $("sort").addEventListener("change", function (e) { state.sort = e.target.value; render(); });
+  $("cat").addEventListener("change", function (e) { state.cat = e.target.value; render(); });
+  $("chips").addEventListener("click", function (e) {
+    var b = e.target.closest(".chip"); if (!b) return;
+    state.r = b.getAttribute("data-r");
+    [].forEach.call(document.querySelectorAll(".chip"), function (c) { c.classList.toggle("on", c === b); });
+    render();
+  });
+  $("bigger").onclick = function () { fs = Math.min(30, fs + 2); applyFs(); };
+  $("smaller").onclick = function () { fs = Math.max(14, fs - 2); applyFs(); };
+  $("setBudget").onclick = function () {
+    var v = prompt("Daily potassium limit in mg (from the doctor or dietitian):", budget);
+    v = parseInt(v, 10);
+    if (v >= 500 && v <= 6000) { budget = v; try { localStorage.setItem("budget", v); } catch (e) {} render(); }
+  };
+
+  applyFs(); render();
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
+})();
+</script>
+</body>
+</html>
